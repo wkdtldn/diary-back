@@ -1,9 +1,12 @@
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
-from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.contrib.auth import authenticate, login, logout
-from django.db import models
+from django_redis import get_redis_connection
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from django.db.models import Q
 
 
 from rest_framework.decorators import api_view, permission_classes, action
@@ -19,9 +22,7 @@ from .serializers import (
     CommentSerializer,
 )
 
-
-def test_request(request):
-    return JsonResponse({"details": "successful request"}, status=status.HTTP_200_OK)
+from datetime import timedelta
 
 
 # Other
@@ -29,6 +30,40 @@ def test_request(request):
 def get_csrf_token(request):
     csrf_token = get_token(request)
     return JsonResponse({"csrftoken": csrf_token})
+
+
+# active
+redis_conn = get_redis_connection("default")
+
+
+@login_required
+def update_user_status(request):
+    user_id = request.user.id
+    # 유저 활성화 상태를 Redis에 저장, 만료 시간 1분
+    # redis_conn.set(f"user:{user_id}:status", "active", ex=30)
+    redis_conn.set(
+        f"user:{user_id}:last_seen",
+        timezone.localtime(timezone.now() + timedelta(hours=9)).isoformat(),
+    )
+    return JsonResponse({"details": "update status"}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def check_user_status(request, user_id):
+    last_seen = redis_conn.get(f"user:{user_id}:last_seen")
+    print(last_seen)
+    if last_seen:
+        last_active_time = timezone.datetime.fromisoformat(last_seen.decode())
+        time_difference = (
+            timezone.localtime(timezone.now() + timedelta(hours=9)) - last_active_time
+        )
+        if (
+            time_difference.total_seconds() > 60
+        ):  # 1분 이상 업데이트되지 않으면 offline 처리
+            return JsonResponse({"status": False, "last_active": last_seen.decode()})
+        return JsonResponse({"status": True, "last_active": last_seen.decode()})
+    return JsonResponse({"status": False})
 
 
 # User
@@ -97,7 +132,6 @@ class UserCreateView(APIView):
             else:
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-
         return Response(
             {"detail": "Invalid value"},
             status=status.HTTP_400_BAD_REQUEST,
@@ -142,7 +176,7 @@ class FollowViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Follow.objects.filter(models.Q(follower=user) | models.Q(following=user))
+        return Follow.objects.filter(Q(follower=user) | Q(following=user))
 
     def perform_create(self, serializer):
         serializer.save(follower=self.request.user)
@@ -191,7 +225,26 @@ class DiaryCreateView(generics.CreateAPIView):
         return {"request": self.request}  # 요청 객체를 serializer의 context에 추가
 
 
-class DiaryRetrieveView(APIView):
+class DiaryRetrieveView(generics.RetrieveAPIView):
+    queryset = Diary.objects.all()
+    serializer_class = DiarySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class DiaryRetrieveByUserView(generics.RetrieveAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk=None):
+        if request.user == pk:
+            diaries = Diary.objects.filter(writer=pk).order_by("-date", "-time")
+        else:
+            diaries = Diary.objects.filter(Q(writer=pk) & Q(is_public=True))
+
+        serializer = DiarySerializer(diaries, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class DiaryFilterRetrieveView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
@@ -199,21 +252,40 @@ class DiaryRetrieveView(APIView):
         month = request.query_params.get("month")
         option = request.query_params.get("option")
         if date:
-            diaries = Diary.objects.filter(date=date).order_by("-time")
+            diaries = (
+                Diary.objects.filter(Q(is_public=True) | Q(writer=request.user))
+                .filter(date=date)
+                .order_by("-time")
+            )
         if month:
             year, month = month.split("-")
             if option == "old":
-                diaries = Diary.objects.filter(
-                    date__year=year, date__month=month
-                ).order_by("date", "time")
+                diaries = (
+                    Diary.objects.filter(Q(is_public=True) | Q(writer=request.user))
+                    .filter(
+                        date__year=year,
+                        date__month=month,
+                    )
+                    .order_by("date", "time")
+                )
             elif option == "like":
-                diaries = Diary.objects.filter(
-                    date__year=year, date__month=month
-                ).order_by("-like")
+                diaries = (
+                    Diary.objects.filter(Q(is_public=True) | Q(writer=request.user))
+                    .filter(
+                        date__year=year,
+                        date__month=month,
+                    )
+                    .order_by("-like")
+                )
             else:
-                diaries = Diary.objects.filter(
-                    date__year=year, date__month=month
-                ).order_by("-date", "-time")
+                diaries = (
+                    Diary.objects.filter(Q(is_public=True) | Q(writer=request.user))
+                    .filter(
+                        date__year=year,
+                        date__month=month,
+                    )
+                    .order_by("-date", "-time")
+                )
 
         serializer = DiarySerializer(diaries, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -258,14 +330,6 @@ class CommentViewSet(viewsets.ModelViewSet):
         diary_instance = get_object_or_404(Diary, id=pk)
         comments = Comment.objects.filter(diary=diary_instance).order_by("-created_at")
         serializer = self.get_serializer(comments, many=True)
-        return Response(serializer.data)
-
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop("partial", False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
         return Response(serializer.data)
 
     @action(

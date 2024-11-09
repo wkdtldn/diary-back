@@ -1,8 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission
 import uuid
-from datetime import datetime
 import os
+from .bert import BertModel
 
 
 # User
@@ -72,21 +72,37 @@ class Follow(models.Model):
 
 
 # Diary
+bert_model = BertModel()
+
+
 class Diary(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    text = models.TextField(blank=False, null=False)
+    text = models.TextField(blank=True, null=True)
     content = models.TextField(blank=False, null=False, default="")
     images = models.JSONField(default=list, blank=True)
     date = models.DateField()
     time = models.TimeField(auto_now_add=True)
     like = models.ManyToManyField(UserModel, related_name="liked_diaries", blank=True)
     writer = models.ForeignKey(UserModel, on_delete=models.CASCADE)
+    is_public = models.BooleanField(default=True)
+    emotion = models.IntegerField(blank=True, null=True)
+    probs = models.JSONField(default=list, blank=True)
 
     def delete(self, *args, **kwargs):
-        if self.image:
-            if os.path.isfile(self.image.path):
-                os.remove(self.image.path)
+        if self.images:
+            for image in self.images:
+                if os.path.isfile(image):
+                    os.remove(image)
         super().delete(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        diary_text = self.text.replace("\n", " ")
+        modified_text = diary_text.replace(" ", "")
+        if modified_text != "":
+            emotion, probs = bert_model.sentiment_analysis(diary_text)
+            self.emotion = emotion
+            self.probs = probs
+        super().save(*args, **kwargs)
 
 
 # Comment

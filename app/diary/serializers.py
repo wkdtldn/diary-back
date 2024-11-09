@@ -3,7 +3,6 @@ from rest_framework import serializers
 from drf_extra_fields.fields import Base64ImageField
 from .models import UserModel, Follow, Diary, Comment
 import base64
-from django.db import models
 import uuid
 
 
@@ -24,15 +23,6 @@ class UserSerializer(serializers.ModelSerializer):
     def get_followers(self, obj):
         followers = Follow.objects.filter(following=obj)
         return [follower.follower.username for follower in followers]
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-
-        if instance.image:
-            with open(instance.image.path, "rb") as image_file:
-                encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
-                representation["image"] = f"data:image/jpeg;base64,{encoded_string}"
-        return representation
 
     def create(self, validated_data):
         user = UserModel(
@@ -126,33 +116,18 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 # Diary
-
-
 class DiarySerializer(serializers.ModelSerializer):
     writer_name = serializers.CharField(source="writer.username", read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
-    images = serializers.ListField(child=Base64ImageField(), write_only=True)
+    images = serializers.ListField()
     like_count = serializers.SerializerMethodField()
     likes = serializers.SerializerMethodField()
 
     class Meta:
         model = Diary
         fields = "__all__"
+        excluded = ["like"]
         read_only_fields = ("writer", "likes", "like_count", "created_at")
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-
-        if instance.images:
-            image_list = []
-            for image in instance.images:
-                with open(image, "rb") as image_file:
-                    encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
-                    image_list.append(f"data:image/jpeg;base64,{encoded_string}")
-            representation["images"] = image_list
-        else:
-            representation["images"] = []
-        return representation
 
     def get_like_count(self, obj):
         return obj.like.count()
@@ -170,23 +145,20 @@ class DiarySerializer(serializers.ModelSerializer):
         text = request.data.get("text")
         content = request.data.get("content")
         images = request.data.get("images", [])
+        image_paths = []
         if images:
-            image_paths = []
-
             for image in images:
-                # 파일을 저장할 경로 생성
-                format, imgstr = image.split(";base64,")  # base64에서 파일 형식 추출
+                format, imgstr = image.split(";base64,")
                 ext = format.split("/")[-1]
                 file_name = f"{uuid.uuid4()}.{ext}"
-                image_path = f"diary_images/{file_name}"
+                image_path = f"media/diary_images/{file_name}"
 
-                # base64 이미지 저장
                 with open(image_path, "wb") as f:
                     f.write(base64.b64decode(imgstr))
 
                 image_paths.append(image_path)
-            validated_data["images"] = image_paths
 
+        validated_data["images"] = image_paths
         validated_data["writer"] = writer
         validated_data["text"] = text
         validated_data["content"] = content

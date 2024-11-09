@@ -24,6 +24,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 import os
 
+import pymysql
+
+pymysql.install_as_MySQLdb()
+
 # from django.core.exceptions import ImproperlyConfigured
 
 
@@ -38,12 +42,17 @@ import os
 # SECRET_KEY = get_env_variable("DJANGO_SECRET")
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-4%s#+n+85)7mvbqto(7n$f#52-922$o3k-roxr^x&k9_0ljqdw"
+
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 
+TIME_ZONE = "Asia/Seoul"
+
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
@@ -58,10 +67,13 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework_simplejwt",
     "django_extensions",
     "sslserver",
     "corsheaders",
     "diary",
+    "channels",
+    "oauth2_provider",
 ]
 
 REST_FRAMEWORK = {
@@ -90,16 +102,24 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 LOGIN_URL = "/login/"
 
 
+# ASGI_APPLICATION = "diary.asgi.application"
+
+
 # CORS
 from corsheaders.defaults import default_headers
 
-CORS_ORIGIN_ALLOW_ALL = True
+
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:8000",
+#     "http://127.0.0.1:8000",
+#     "https://3a53-221-149-135-202.ngrok-free.app",
+# ]
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "x-csrftoken",  # CSRF 토큰을 요청 헤더에 포함할 때 필요
@@ -112,7 +132,6 @@ CORS_ALLOW_METHODS = [
     "PATCH",
     "OPTIONS",
 ]
-CORS_ALLOW_CREDENTIALS = True  # 인증 관련 헤더 허용
 
 
 # CSRF
@@ -123,6 +142,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "https://main--d-diary.netlify.app",
     "https://d-diary.netlify.app",
+    "https://3a53-221-149-135-202.ngrok-free.app",
 ]
 
 # Secure
@@ -154,7 +174,6 @@ WSGI_APPLICATION = "back.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-## Change to 'MySql'
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
@@ -163,8 +182,26 @@ DATABASES = {
         "PASSWORD": "Wkdtldn.mat18!",
         "HOST": "localhost",
         "PORT": "3306",
+        "OPTIONS": {
+            "charset": "utf8mb4",
+            "init_command": "SET NAMES 'utf8mb4'",
+        },
     }
 }
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}
+
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
 
 
 # Password validation

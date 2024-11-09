@@ -9,7 +9,6 @@ follow_router = DefaultRouter()
 follow_router.register(r"follow", views.FollowViewSet, basename="follow")
 
 urlpatterns = [
-    path("test_request/", views.test_request, name="test"),
     ## Other
     # Token / csrf
     path("token/csrf/", views.get_csrf_token, name="csrf-token"),
@@ -32,13 +31,31 @@ urlpatterns = [
         views.UsernameFilter.as_view(),
         name="username-filtering",
     ),
+    # update active status
+    path("update-status/", views.update_user_status, name="update_user_status"),
+    # check active status
+    path(
+        "check-status/<int:user_id>/", views.check_user_status, name="check_user_status"
+    ),
     ## Diary
     # search
-    path("diary/", views.DiaryRetrieveView.as_view(), name="diary-retrieve"),
+    path(
+        "diary/filter/",
+        views.DiaryFilterRetrieveView.as_view(),
+        name="diary-retrieve-by-filter",
+    ),
+    path("diary/<str:pk>/", views.DiaryRetrieveView.as_view(), name="diary-retrieve"),
+    path(
+        "diary/by_user/<int:pk>",
+        views.DiaryRetrieveByUserView.as_view(),
+        name="diary-retrieve-by-user",
+    ),
     # create
-    path("diary/write/", views.DiaryCreateView.as_view(), name="diary-write"),
+    path("diary/", views.DiaryCreateView.as_view(), name="diary-write"),
     # remove
-    path("diary/remove/", views.DiaryDestoryView.as_view(), name="diary-remove"),
+    path(
+        "diary/delete/<str:pk>/", views.DiaryDestoryView.as_view(), name="diary-delete"
+    ),
     # like
     path("diary/like/<str:pk>/", views.DiaryLikeView.as_view(), name="diary-like"),
     ## Comment
