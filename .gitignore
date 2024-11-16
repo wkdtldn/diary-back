@@ -1,3 +1,5 @@
+echo ".env" >> .gitignore
+
 # Created by https://www.toptal.com/developers/gitignore/api/python,venv,django,macos
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,venv,django,macos
 
@@ -306,4 +308,4 @@ pyrightconfig.json
 pyvenv.cfg
 pip-selfcheck.json
 
-# End of https://www.toptal.com/developers/gitignore/api/python,venv,django,macos
+# End of https://www.toptal.com/developers/gitignore/api/python,venv,django,macos.env
