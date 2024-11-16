@@ -43,7 +43,7 @@ def update_user_status(request):
     # redis_conn.set(f"user:{user_id}:status", "active", ex=30)
     redis_conn.set(
         f"user:{user_id}:last_seen",
-        timezone.localtime(timezone.now() + timedelta(hours=9)).isoformat(),
+        timezone.localtime(timezone.now()).isoformat(),
     )
     return JsonResponse({"details": "update status"}, status=status.HTTP_200_OK)
 
@@ -55,9 +55,7 @@ def check_user_status(request, user_id):
     print(last_seen)
     if last_seen:
         last_active_time = timezone.datetime.fromisoformat(last_seen.decode())
-        time_difference = (
-            timezone.localtime(timezone.now() + timedelta(hours=9)) - last_active_time
-        )
+        time_difference = timezone.localtime(timezone.now()) - last_active_time
         if (
             time_difference.total_seconds() > 60
         ):  # 1분 이상 업데이트되지 않으면 offline 처리
@@ -292,6 +290,12 @@ class DiaryFilterRetrieveView(APIView):
 
 
 class DiaryDestoryView(generics.DestroyAPIView):
+    queryset = Diary.objects.all()
+    serializer_class = DiarySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class DiaryUpdateView(generics.UpdateAPIView):
     queryset = Diary.objects.all()
     serializer_class = DiarySerializer
     permission_classes = [permissions.IsAuthenticated]

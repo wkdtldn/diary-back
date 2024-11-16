@@ -44,7 +44,9 @@ urlpatterns = [
         views.DiaryFilterRetrieveView.as_view(),
         name="diary-retrieve-by-filter",
     ),
+    # retrieve
     path("diary/<str:pk>/", views.DiaryRetrieveView.as_view(), name="diary-retrieve"),
+    # retrieve by username
     path(
         "diary/by_user/<int:pk>",
         views.DiaryRetrieveByUserView.as_view(),
@@ -52,6 +54,10 @@ urlpatterns = [
     ),
     # create
     path("diary/", views.DiaryCreateView.as_view(), name="diary-write"),
+    # update
+    path(
+        "diary/update/<str:pk>/", views.DiaryUpdateView.as_view(), name="diary-update"
+    ),
     # remove
     path(
         "diary/delete/<str:pk>/", views.DiaryDestoryView.as_view(), name="diary-delete"
