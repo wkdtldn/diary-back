@@ -1,5 +1,4 @@
-echo ".env" >> .gitignore
-
+.env
 # Created by https://www.toptal.com/developers/gitignore/api/python,venv,django,macos
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,venv,django,macos
 
