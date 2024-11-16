@@ -3,6 +3,57 @@ from django.contrib.auth.models import AbstractUser, Group, Permission
 import uuid
 import os
 from .bert import BertModel
+import boto3
+import base64
+from io import BytesIO
+import re
+from django.conf import settings
+
+
+def is_base64_encoded(data):
+    """base64 인코딩된 데이터인지 확인"""
+    base64_pattern = re.compile(r"^[A-Za-z0-9+/=]*$")
+    return bool(base64_pattern.match(data))
+
+
+# aws client
+
+
+class S3ImgUploader:
+    def __init__(self, file=None, old_url=None):
+        self.file = file
+        self.old_url = old_url
+        self.s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME,
+        )
+
+    def upload(self):
+
+        if self.old_url:
+            self.delete_old_image()
+
+        if self.file:
+            url = "profile_images/" + uuid.uuid1().hex
+
+            self.s3_client.upload_fileobj(
+                self.file,
+                settings.AWS_STORAGE_BUCKET_NAME,
+                url,
+                ExtraArgs={"ContentType": "image/jpg"},
+            )
+            return url
+
+    def delete_old_image(self):
+        try:
+            file_key = self.old_url.split("profile_images/", 1)[1]
+            self.s3_client.delete_object(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=file_key
+            )
+        except Exception as e:
+            print(f"Error deleting old image: {e}")
 
 
 # User
@@ -33,15 +84,16 @@ class UserModel(AbstractUser):
         ordering = ["username"]
 
     def save(self, *args, **kwargs):
-        # 변경 전의 파일을 기록
         try:
             this = UserModel.objects.get(id=self.id)
             if this.image != self.image:
-                if os.path.isfile(this.image.path):
-                    if this.image == "profile_images/default.jpg":
-                        pass
-                    else:
-                        os.remove(this.image.path)
+                if this.image.name == "profile_images/default.jpg":
+                    pass
+                else:
+                    uploader = S3ImgUploader(self.image, this.image)
+                    self.image = uploader.upload()
+                    uploader.delete_old_image()
+
         except UserModel.DoesNotExist:
             pass
 
@@ -49,8 +101,9 @@ class UserModel(AbstractUser):
 
     def delete(self, *args, **kwargs):
         if self.image:
-            if os.path.isfile(self.image.path):
-                os.remove(self.image.path)
+            if self.image.name != "profile_images/default.jpg":
+                uploader = S3ImgUploader(old_url=self.image)
+                uploader.delete_old_image()
         super().delete(*args, **kwargs)
 
 

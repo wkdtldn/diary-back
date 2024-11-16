@@ -43,16 +43,18 @@ pymysql.install_as_MySQLdb()
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-4%s#+n+85)7mvbqto(7n$f#52-922$o3k-roxr^x&k9_0ljqdw"
 
-
-MEDIA_URL = "/media/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
-
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+AWS_ACCESS_KEY_ID = "AKIAZQ3DR442XYYNSOU4"
+AWS_SECRET_ACCESS_KEY = "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"
+AWS_STORAGE_BUCKET_NAME = "dailydiaryappbucket"
+AWS_S3_REGION_NAME = "ap-northeast-2"
+AWS_S3_FILE_OVERWRITE = False
 
 # Application definition
 
@@ -71,6 +73,7 @@ INSTALLED_APPS = [
     "diary",
     "channels",
     "oauth2_provider",
+    "storages",
 ]
 
 REST_FRAMEWORK = {
@@ -86,9 +89,6 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 AUTH_USER_MODEL = "diary.UserModel"
-
-# Session Setting
-
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -111,11 +111,6 @@ LOGIN_URL = "/login/"
 from corsheaders.defaults import default_headers
 
 
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:8000",
-#     "http://127.0.0.1:8000",
-#     "https://3a53-221-149-135-202.ngrok-free.app",
-# ]
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = list(default_headers) + [

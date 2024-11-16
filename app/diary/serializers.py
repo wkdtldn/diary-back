@@ -2,8 +2,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from drf_extra_fields.fields import Base64ImageField
 from .models import UserModel, Follow, Diary, Comment
-import base64
-import uuid
 
 
 # User
@@ -11,10 +9,23 @@ class UserSerializer(serializers.ModelSerializer):
     image = Base64ImageField(required=False)
     followings = serializers.SerializerMethodField()
     followers = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = UserModel
-        fields = "__all__"
+        fields = [
+            "id",
+            "username",
+            "name",
+            "image_url",
+            "followings",
+            "followers",
+            "image",
+        ]
+
+    def get_image_url(self, obj):
+        imageUrl = "https://dailydiaryappbucket.s3.amazonaws.com/" + obj.image.name
+        return imageUrl
 
     def get_followings(self, obj):
         followings = Follow.objects.filter(follower=obj)
@@ -33,16 +44,6 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(validated_data.get("password"))
         user.save()
         return user
-
-    def update(self, instance, validated_data):
-        instance.name = validated_data.get("name", instance.name)
-        instance.username = validated_data.get("username", instance.username)
-        instance.email = validated_data.get("email", instance.email)
-        instance.image = validated_data.get("image", instance.image)
-        # instance.password = validated_data.get("password", instance.password)
-        instance.save()
-
-        return instance
 
 
 # Follow
@@ -80,7 +81,7 @@ class CommentSerializer(serializers.ModelSerializer):
     like_count = serializers.SerializerMethodField()
     likes = serializers.SerializerMethodField()
     writer_name = serializers.CharField(source="writer.username", read_only=True)
-    image = Base64ImageField(required=False)
+    writer_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
@@ -92,9 +93,14 @@ class CommentSerializer(serializers.ModelSerializer):
             "comment",
             "like_count",
             "likes",
-            "image",
+            "writer_image_url",
         ]
         read_only_fields = ("writer_name", "likes", "like_count", "created_at")
+
+    def get_writer_image_url(self, obj):
+        user = UserModel.objects.get(username=obj.writer)
+        serializer = UserSerializer(user)
+        return serializer.data["image_url"]
 
     def get_like_count(self, obj):
         return obj.like.count()
@@ -119,7 +125,7 @@ class CommentSerializer(serializers.ModelSerializer):
 class DiarySerializer(serializers.ModelSerializer):
     writer_name = serializers.CharField(source="writer.username", read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
-    images = serializers.ListField()
+    # images = serializers.ListField()
     like_count = serializers.SerializerMethodField()
     likes = serializers.SerializerMethodField()
 
@@ -144,21 +150,21 @@ class DiarySerializer(serializers.ModelSerializer):
 
         text = request.data.get("text")
         content = request.data.get("content")
-        images = request.data.get("images", [])
-        image_paths = []
-        if images:
-            for image in images:
-                format, imgstr = image.split(";base64,")
-                ext = format.split("/")[-1]
-                file_name = f"{uuid.uuid4()}.{ext}"
-                image_path = f"media/diary_images/{file_name}"
+        # images = request.data.get("images", [])
+        # image_paths = []
+        # if images:
+        #     for image in images:
+        #         format, imgstr = image.split(";base64,")
+        #         ext = format.split("/")[-1]
+        #         file_name = f"{uuid.uuid4()}.{ext}"
+        #         image_path = f"media/diary_images/{file_name}"
 
-                with open(image_path, "wb") as f:
-                    f.write(base64.b64decode(imgstr))
+        #         with open(image_path, "wb") as f:
+        #             f.write(base64.b64decode(imgstr))
 
-                image_paths.append(image_path)
+        #         image_paths.append(image_path)
 
-        validated_data["images"] = image_paths
+        # validated_data["images"] = image_paths
         validated_data["writer"] = writer
         validated_data["text"] = text
         validated_data["content"] = content
