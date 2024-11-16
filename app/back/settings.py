@@ -41,7 +41,7 @@ pymysql.install_as_MySQLdb()
 
 # SECRET_KEY = get_env_variable("DJANGO_SECRET")
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-4%s#+n+85)7mvbqto(7n$f#52-922$o3k-roxr^x&k9_0ljqdw"
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
