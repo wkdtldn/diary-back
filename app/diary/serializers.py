@@ -17,6 +17,8 @@ class UserSerializer(serializers.ModelSerializer):
             "id",
             "username",
             "name",
+            "email",
+            "password",
             "image_url",
             "followings",
             "followers",

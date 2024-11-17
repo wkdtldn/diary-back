@@ -22,14 +22,27 @@ from .serializers import (
     CommentSerializer,
 )
 
-from datetime import timedelta
-
 
 # Other
 @ensure_csrf_cookie
 def get_csrf_token(request):
     csrf_token = get_token(request)
     return JsonResponse({"csrftoken": csrf_token})
+
+
+class SearchEvery(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, keyword):
+        # User
+        res_username = UserModel.objects.filter(Q(username__icontains=keyword))
+        res_name = UserModel.objects.filter(Q(name__icontains=keyword))
+
+        user_result = res_username.union(res_name)
+
+        serializer = UserSerializer(user_result, many=True)
+
+        return Response(serializer.data)
 
 
 # active
@@ -52,7 +65,6 @@ def update_user_status(request):
 @permission_classes([permissions.IsAuthenticated])
 def check_user_status(request, user_id):
     last_seen = redis_conn.get(f"user:{user_id}:last_seen")
-    print(last_seen)
     if last_seen:
         last_active_time = timezone.datetime.fromisoformat(last_seen.decode())
         time_difference = timezone.localtime(timezone.now()) - last_active_time
@@ -72,7 +84,10 @@ class LoginView(APIView):
         username = request.data.get("username")
         password = request.data.get("password")
 
+        print(username, password)
+
         user = authenticate(request, username=username, password=password)
+        print(user)
 
         if user is not None:
             login(request, user)

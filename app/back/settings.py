@@ -41,7 +41,7 @@ pymysql.install_as_MySQLdb()
 
 # SECRET_KEY = get_env_variable("DJANGO_SECRET")
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = "django-insecure-4%s#+n+85)7mvbqto(7n$f#52-922$o3k-roxr^x&k9_0ljqdw"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -69,13 +69,9 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
-    "rest_framework_simplejwt",
     "django_extensions",
-    "sslserver",
     "corsheaders",
     "diary",
-    "channels",
-    "oauth2_provider",
     "storages",
 ]
 
@@ -92,6 +88,10 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 AUTH_USER_MODEL = "diary.UserModel"
+
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+]
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",

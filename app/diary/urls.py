@@ -12,6 +12,8 @@ urlpatterns = [
     ## Other
     # Token / csrf
     path("token/csrf/", views.get_csrf_token, name="csrf-token"),
+    # Search
+    path("search/<str:keyword>/", views.SearchEvery.as_view(), name="search"),
     ## User
     # profile
     path("user/", views.CheckAuthView.as_view(), name="user-profile"),
