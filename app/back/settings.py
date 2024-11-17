@@ -56,6 +56,9 @@ AWS_STORAGE_BUCKET_NAME = "dailydiaryappbucket"
 AWS_S3_REGION_NAME = "ap-northeast-2"
 AWS_S3_FILE_OVERWRITE = False
 
+AWS_QUERYSTRING_AUTH = False
+AWS_DEFAULT_ACL = None
+
 # Application definition
 
 INSTALLED_APPS = [
