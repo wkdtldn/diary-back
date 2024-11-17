@@ -9,10 +9,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: diary-back
         uses: actions/checkout@v3
 
-      - name: Configure AWS environment
+      - name: forS3
         env:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
