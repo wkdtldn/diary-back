@@ -18,10 +18,10 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      # - name: Install dependencies
+      #   run: |
+      #     python -m pip install --upgrade pip
+      #     pip install -r requirements.txt
 
       - name: Export secrets as environment variables
         env:
@@ -31,5 +31,9 @@ jobs:
           echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
 
-      - name: Run application
-        run: python manage.py runserver
+      # - name: Set up database
+      #   run: |
+      #     python manage.py migrate
+
+      # - name: Run application
+      #   run: python manage.py runserver 0.0.0.0:8000
